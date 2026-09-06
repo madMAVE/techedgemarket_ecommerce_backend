@@ -1,0 +1,2 @@
+name,description,price,originalPrice,category,subcategory,brandId,model,partNumber,sku,image,images,rating,reviewCount,stock,leadTime,tags,featured,badge,specs,isActive
+"Product Name","Product description here",99.99,149.99,Automation,,brand-uuid-here,"Model X","PN-12345","SKU-001","https://example.com/image.jpg","[""url1"",""url2""]",4.5,10,50,"2-3 days","[""tag1"",""tag2""]",false,"New","{""voltage"":""220V"",""weight"":""1.5kg""}",true

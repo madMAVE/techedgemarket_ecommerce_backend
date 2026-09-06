@@ -1,0 +1,158 @@
+import { Injectable, NotFoundException, BadRequestException } from "@nestjs/common";
+import { PrismaService } from "../common/database/prisma.service";
+import { CreateOrderDto, UpdateOrderStatusDto } from "../common/dto/order.dto";
+import { Prisma } from "@prisma/client";
+import type { OrderStatus } from "../common/types";
+
+@Injectable()
+export class OrdersService {
+  private orderCounter = 141;
+
+  constructor(private prisma: PrismaService) {}
+
+  async findAll(userId: string, userRole: string, query: { page?: string; limit?: string; status?: string }) {
+    const where: Record<string, unknown> = {};
+
+    if (userRole !== "admin" && userRole !== "manager") {
+      where.customerId = userId;
+    }
+
+    if (query.status) {
+      where.status = query.status;
+    }
+
+    const page = Math.max(1, parseInt(query.page ?? "1", 10));
+    const limit = Math.min(100, Math.max(1, parseInt(query.limit ?? "20", 10)));
+
+    const [items, total] = await Promise.all([
+      this.prisma.order.findMany({
+        where,
+        skip: (page - 1) * limit,
+        take: limit,
+        include: { items: true },
+        orderBy: { createdAt: "desc" },
+      }),
+      this.prisma.order.count({ where }),
+    ]);
+
+    return {
+      items,
+      meta: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+        hasNext: page * limit < total,
+        hasPrev: page > 1,
+      },
+    };
+  }
+
+  async findOne(id: string, userId: string, userRole: string) {
+    const order = await this.prisma.order.findUnique({
+      where: { id },
+      include: { items: true },
+    });
+
+    if (!order) {
+      throw new NotFoundException(`Order with ID ${id} not found`);
+    }
+
+    if (userRole !== "admin" && userRole !== "manager" && order.customerId !== userId) {
+      throw new NotFoundException(`Order with ID ${id} not found`);
+    }
+
+    return order;
+  }
+
+  async create(dto: CreateOrderDto, user: { userId: string; email: string; role: string }) {
+    const customer = await this.prisma.user.findUnique({ where: { id: user.userId } });
+    if (!customer) {
+      throw new BadRequestException("Customer not found");
+    }
+
+    const items = [];
+    let subtotal = 0;
+
+    for (const item of dto.items) {
+      const product = await this.prisma.product.findUnique({ where: { id: item.productId } });
+      if (!product || !product.isActive) {
+        throw new BadRequestException(`Product ${item.productId} not available`);
+      }
+      if (product.stock < item.quantity) {
+        throw new BadRequestException(`Insufficient stock for ${product.name}`);
+      }
+
+      const totalPrice = product.price * item.quantity;
+      subtotal += totalPrice;
+
+      items.push({
+        productId: product.id,
+        productName: product.name,
+        sku: product.sku,
+        quantity: item.quantity,
+        unitPrice: product.price,
+        totalPrice,
+      });
+
+      await this.prisma.product.update({
+        where: { id: product.id },
+        data: { stock: { decrement: item.quantity } },
+      });
+    }
+
+    const taxAmount = Math.round(subtotal * 0.18 * 100) / 100;
+    const shippingAmount = subtotal > 1000 ? 0 : 50;
+    const discountAmount = 0;
+    const totalAmount = subtotal + taxAmount + shippingAmount - discountAmount;
+
+    this.orderCounter += 1;
+    const year = new Date().getFullYear();
+    const orderNumber = `TEM-${year}-${String(this.orderCounter).padStart(5, "0")}`;
+
+    return this.prisma.order.create({
+      data: {
+        orderNumber,
+        customerId: customer.id,
+        customerName: customer.name,
+        customerEmail: customer.email,
+        customerCompany: customer.company ?? "",
+        subtotal,
+        taxAmount,
+        shippingAmount,
+        discountAmount,
+        totalAmount,
+        status: "pending",
+        paymentMethod: dto.paymentMethod,
+        poReference: dto.poReference ?? null,
+        shippingAddress: dto.shippingAddress as unknown as Prisma.InputJsonValue,
+        notes: dto.notes ?? null,
+        items: {
+          create: items,
+        },
+      },
+      include: { items: true },
+    });
+  }
+
+  async updateStatus(id: string, dto: UpdateOrderStatusDto) {
+    const order = await this.prisma.order.findUnique({ where: { id } });
+    if (!order) {
+      throw new NotFoundException(`Order with ID ${id} not found`);
+    }
+
+    const validStatuses: OrderStatus[] = ["pending", "confirmed", "processing", "shipped", "delivered", "cancelled", "refunded"];
+    if (!validStatuses.includes(dto.status as OrderStatus)) {
+      throw new BadRequestException(`Invalid status: ${dto.status}`);
+    }
+
+    return this.prisma.order.update({
+      where: { id },
+      data: {
+        status: dto.status as OrderStatus,
+        trackingNumber: dto.trackingNumber ?? null,
+        estimatedDelivery: dto.estimatedDelivery ?? null,
+      },
+    });
+  }
+}

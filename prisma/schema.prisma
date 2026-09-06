@@ -1,0 +1,293 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Admin {
+  id        String   @id @default(uuid()) @map("adminId")
+  username  String   @unique
+  password  String
+  contact   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("admins")
+}
+
+model User {
+  id        String   @id @default(uuid())
+  name      String
+  email     String   @unique
+  password  String
+  role      UserRole @default(customer)
+  company   String?
+  phone     String?
+  gstin     String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  orders       Order[]
+  refreshTokens RefreshToken[]
+
+  @@map("users")
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  userId    String
+  expiresAt DateTime
+  revoked   Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("refresh_tokens")
+}
+
+model Brand {
+  id          String    @id @default(uuid())
+  name        String    @unique
+  logo        String?
+  description String?
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  products    Product[]
+
+  @@map("brands")
+}
+
+model Keyword {
+  id        String    @id @default(uuid())
+  word      String    @unique
+  score     Int       @default(0)
+  products  Product[]
+  
+  @@map("keywords")
+}
+
+model Product {
+  id            String   @id @default(uuid())
+  name          String
+  description   String
+  price         Float
+  originalPrice Float?
+  category      String
+  subcategory   String?
+  brandId       String
+  model         String
+  partNumber    String
+  sku           String   @unique
+  image         String
+  images        String[]
+  rating        Float    @default(0)
+  reviewCount   Int      @default(0)
+  stock         Int      @default(0)
+  leadTime      String   @default("2-3 days")
+  featured      Boolean  @default(false)
+  badge         String?
+  specs         Json
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  brand         Brand     @relation(fields: [brandId], references: [id])
+  inventory     Inventory?
+  orderItems    OrderItem[]
+  keywords      Keyword[]
+
+  @@index([brandId])
+  @@map("products")
+}
+
+model Order {
+  id              String      @id @default(uuid())
+  orderNumber     String      @unique
+  customerId      String
+  customerName    String
+  customerEmail   String
+  customerCompany String
+  subtotal        Float
+  taxAmount       Float
+  shippingAmount  Float
+  discountAmount  Float       @default(0)
+  totalAmount     Float
+  status          OrderStatus @default(pending)
+  paymentMethod   String
+  poReference     String?
+  shippingAddress Json
+  trackingNumber  String?
+  estimatedDelivery String?
+  notes           String?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  customer User      @relation(fields: [customerId], references: [id])
+  items    OrderItem[]
+
+  @@map("orders")
+}
+
+model OrderItem {
+  id          String  @id @default(uuid())
+  orderId     String
+  productId   String
+  productName String
+  sku         String
+  quantity    Int
+  unitPrice   Float
+  totalPrice  Float
+
+  order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id])
+
+  @@map("order_items")
+}
+
+model Inventory {
+  id             String      @id @default(uuid())
+  productId      String      @unique
+  sku            String
+  currentStock   Int         @default(0)
+  reservedStock  Int         @default(0)
+  availableStock Int         @default(0)
+  reorderPoint   Int         @default(10)
+  maxStock       Int         @default(100)
+  unitCost       Float       @default(0)
+  location       String      @default("Warehouse A")
+  supplier       String      @default("")
+  lastRestocked  DateTime?
+  status         StockStatus @default(in_stock)
+  updatedAt      DateTime    @updatedAt
+
+  product Product @relation(fields: [productId], references: [id])
+
+  @@map("inventory")
+}
+
+model ProcurementOrder {
+  id           String             @id @default(uuid())
+  poNumber     String             @unique
+  supplierId   String
+  supplierName String
+  items        Json
+  status       ProcurementStatus  @default(draft)
+  totalAmount  Float
+  currency     String             @default("INR")
+  requestedBy  String
+  requestDate  DateTime           @default(now())
+  approvedDate DateTime?
+  expectedDate DateTime?
+  receivedDate DateTime?
+  notes        String?
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+
+  @@map("procurement_orders")
+}
+
+model Prospect {
+  id           String         @id @default(uuid())
+  name         String
+  company      String
+  email        String
+  phone        String
+  industry     String
+  status       ProspectStatus @default(new)
+  source       String
+  value        Float          @default(0)
+  probability  Float          @default(0)
+  assignedTo   String
+  requirements String?
+  notes        String?
+  nextFollowUp DateTime?
+  tags         String[]
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  @@map("prospects")
+}
+
+model ServiceTicket {
+  id             String          @id @default(uuid())
+  ticketNumber   String          @unique
+  title          String
+  description    String
+  status         ServiceStatus   @default(open)
+  priority       ServicePriority @default(medium)
+  category       String
+  customerId     String
+  customerName   String
+  company        String
+  assignedTo     String?
+  estimatedHours Float           @default(0)
+  actualHours    Float?
+  resolvedDate   DateTime?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  @@map("service_tickets")
+}
+
+enum UserRole {
+  admin
+  manager
+  sales
+  customer
+}
+
+enum OrderStatus {
+  pending
+  confirmed
+  processing
+  shipped
+  delivered
+  cancelled
+  refunded
+}
+
+enum StockStatus {
+  in_stock
+  low_stock
+  out_of_stock
+}
+
+enum ProcurementStatus {
+  draft
+  submitted
+  approved
+  ordered
+  received
+  cancelled
+}
+
+enum ProspectStatus {
+  new
+  contacted
+  qualified
+  proposal
+  negotiation
+  won
+  lost
+}
+
+enum ServiceStatus {
+  open
+  in_progress
+  resolved
+  closed
+}
+
+enum ServicePriority {
+  low
+  medium
+  high
+  critical
+}

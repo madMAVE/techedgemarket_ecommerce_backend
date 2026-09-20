@@ -14,7 +14,7 @@ import { OrdersService } from "./orders.service";
 import { JwtAuthGuard } from "../common/guards/jwt-auth.guard";
 import { RolesGuard } from "../common/guards/roles.guard";
 import { Roles } from "../common/guards/roles.decorator";
-import { CreateOrderDto, UpdateOrderStatusDto } from "../common/dto/order.dto";
+import { CreateOrderDto, UpdateOrderStatusDto, SendOtpDto, VerifyOtpDto } from "../common/dto/order.dto";
 import { Request } from "express";
 import type { TokenPayload } from "../common/types";
 
@@ -27,6 +27,24 @@ interface AuthRequest extends Request {
 @Controller("orders")
 export class OrdersController {
   constructor(private ordersService: OrdersService) {}
+
+  @Post("otp/send")
+  @ApiOperation({ summary: "Send OTP to mobile number" })
+  @ApiBody({ type: SendOtpDto })
+  @ApiResponse({ status: 200, description: "OTP sent successfully" })
+  @ApiResponse({ status: 400, description: "Invalid mobile number" })
+  async sendOtp(@Body() dto: SendOtpDto) {
+    return this.ordersService.sendOtp(dto.mobile);
+  }
+
+  @Post("otp/verify")
+  @ApiOperation({ summary: "Verify OTP and get verification token" })
+  @ApiBody({ type: VerifyOtpDto })
+  @ApiResponse({ status: 200, description: "OTP verified, token returned" })
+  @ApiResponse({ status: 400, description: "Invalid or expired OTP" })
+  async verifyOtp(@Body() dto: VerifyOtpDto) {
+    return this.ordersService.verifyOtp(dto.mobile, dto.otp);
+  }
 
   @Get()
   @UseGuards(JwtAuthGuard)

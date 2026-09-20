@@ -87,9 +87,10 @@ export class CreateOrderDto {
   @IsString()
   locationUrl?: string;
 
-  @ApiProperty({ example: true })
-  @IsBoolean()
-  otpVerified: boolean;
+  @ApiProperty({ example: "otp-verification-token-here", description: "Token received after OTP verification" })
+  @IsNotEmpty()
+  @IsString()
+  otpToken: string;
 
   @ApiProperty({ example: "wire_transfer" })
   @IsNotEmpty()
@@ -127,4 +128,23 @@ export class UpdateOrderStatusDto {
   @IsOptional()
   @IsString()
   estimatedDelivery?: string;
+}
+
+export class SendOtpDto {
+  @ApiProperty({ example: "9876543210" })
+  @IsNotEmpty()
+  @IsString()
+  mobile: string;
+}
+
+export class VerifyOtpDto {
+  @ApiProperty({ example: "9876543210" })
+  @IsNotEmpty()
+  @IsString()
+  mobile: string;
+
+  @ApiProperty({ example: "123456" })
+  @IsNotEmpty()
+  @IsString()
+  otp: string;
 }

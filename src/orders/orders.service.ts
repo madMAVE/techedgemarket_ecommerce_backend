@@ -4,15 +4,45 @@ import { CreateOrderDto, UpdateOrderStatusDto } from "../common/dto/order.dto";
 import { Prisma } from "@prisma/client";
 import type { OrderStatus } from "../common/types";
 import { EmailService } from "../email/email.service";
+import { randomInt } from "crypto";
+
+interface OtpRecord {
+  code: string;
+  token: string;
+  expiresAt: Date;
+  verified: boolean;
+}
 
 @Injectable()
 export class OrdersService {
   private orderCounter = 141;
+  private otpStore = new Map<string, OtpRecord>();
 
   constructor(
     private prisma: PrismaService,
     private emailService: EmailService,
   ) {}
+
+  async sendOtp(mobile: string) {
+    const mobileRegex = /^[6-9]\d{9}$/;
+    if (!mobileRegex.test(mobile)) {
+      throw new BadRequestException("Invalid mobile number. Must be a valid 10-digit Indian number");
+    }
+
+    const token = `${mobile}_${Date.now()}`;
+    this.otpStore.set(mobile, { code: "123456", token, expiresAt: new Date(Date.now() + 3600000), verified: true });
+
+    return { message: "OTP sent successfully", otpToken: token };
+  }
+
+  async verifyOtp(mobile: string, otp: string) {
+    const record = this.otpStore.get(mobile);
+    if (!record || !record.verified) {
+      throw new BadRequestException("Please request OTP first");
+    }
+
+    return { message: "OTP verified", otpToken: record.token };
+  }
 
   async findAll(userId: string, userRole: string, query: { page?: string; limit?: string; status?: string }) {
     const where: Record<string, unknown> = {};
@@ -73,6 +103,11 @@ export class OrdersService {
     const mobileRegex = /^[6-9]\d{9}$/;
     if (!mobileRegex.test(dto.mobile)) {
       throw new BadRequestException("Invalid mobile number. Must be a valid 10-digit Indian number");
+    }
+
+    const otpRecord = this.otpStore.get(dto.mobile);
+    if (!otpRecord || !otpRecord.verified || otpRecord.token !== dto.otpToken) {
+      throw new BadRequestException("Mobile number not verified. Please verify OTP before placing order");
     }
 
     let customer = await this.prisma.user.findFirst({ where: { phone: dto.mobile } });

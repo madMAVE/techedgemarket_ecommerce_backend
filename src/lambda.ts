@@ -60,7 +60,12 @@ async function createServer() {
 }
 
 export default async function handler(req: IncomingMessage, res: ServerResponse) {
-  res.setHeader("Access-Control-Allow-Origin", process.env.ALLOWED_ORIGINS?.split(",")[0] ?? "http://localhost:3000");
+  const rawOrigins = process.env.ALLOWED_ORIGINS?.trim();
+  const allowedOrigins = rawOrigins ? rawOrigins.split(",").filter(Boolean) : ["http://localhost:3000"];
+  const origin = req.headers.origin ?? "";
+  const allowedOrigin = allowedOrigins.includes(origin) ? origin : allowedOrigins[0];
+
+  res.setHeader("Access-Control-Allow-Origin", allowedOrigin);
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, x-request-time");
   res.setHeader("Access-Control-Allow-Credentials", "true");
@@ -71,7 +76,12 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
     return;
   }
 
-  const server = await createServer();
-  if (!server) throw new Error("Server instance not initialized");
-  server(req, res);
+  try {
+    const server = await createServer();
+    if (!server) throw new Error("Server instance not initialized");
+    server(req, res);
+  } catch (err) {
+    res.writeHead(500, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({ error: "Internal server error", message: err instanceof Error ? err.message : String(err) }));
+  }
 }

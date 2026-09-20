@@ -54,4 +54,15 @@ export class AppConfig {
       gstin: this.config.get<string>("COMPANY_GSTIN", "36AABCT1234Z1Z5"),
     };
   }
+
+  get email() {
+    return {
+      host: this.config.get<string>("EMAIL_HOST", "smtp.gmail.com"),
+      port: this.config.get<number>("EMAIL_PORT", 587),
+      secure: this.config.get<boolean>("EMAIL_SECURE", false),
+      user: this.config.get<string>("EMAIL_USER", ""),
+      pass: this.config.get<string>("EMAIL_PASS", ""),
+      toAddress: this.config.get<string>("EMAIL_TO_ADDRESS", "techedgehelpdesk@gmail.com"),
+    };
+  }
 }

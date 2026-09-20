@@ -2,6 +2,7 @@ import { Injectable, BadRequestException } from "@nestjs/common";
 import { SupabaseService } from "../supabase/supabase.service";
 import { extname } from "path";
 import { randomUUID } from "crypto";
+import sharp from "sharp";
 
 export interface UploadResult {
   fileName: string;
@@ -48,6 +49,25 @@ export class UploadsService {
     return `${prefix}${randomUUID()}${ext}`;
   }
 
+  async compressAndConvertToWebP(file: Express.Multer.File): Promise<{ buffer: Buffer; mimeType: string; size: number }> {
+    const MAX_WIDTH = 1200;
+    const QUALITY = 80;
+
+    let image = sharp(file.buffer);
+    const metadata = await image.metadata();
+
+    if (metadata.width && metadata.width > MAX_WIDTH) {
+      image = image.resize({ width: MAX_WIDTH, withoutEnlargement: true });
+    }
+
+    const webpBuffer = await image.webp({ quality: QUALITY }).toBuffer();
+    const newSize = webpBuffer.length;
+
+    console.log(`[Image Process] ${file.originalname}: ${file.size} bytes → ${newSize} bytes (${Math.round((1 - newSize / file.size) * 100)}% reduction)`);
+
+    return { buffer: webpBuffer, mimeType: "image/webp", size: newSize };
+  }
+
   async uploadFile(
     file: Express.Multer.File,
     folder: string,
@@ -56,18 +76,20 @@ export class UploadsService {
   ): Promise<UploadResult> {
     this.validateFile(file, config);
 
-    const fileName = this.generateFileName(file.originalname, `${folder}/`, customFileName);
-    console.log(`[Upload] Uploading file: ${fileName} (${file.mimetype}, ${file.size} bytes)`);
+    const { buffer, mimeType } = await this.compressAndConvertToWebP(file);
 
-    const publicUrl = await this.supabase.uploadFile(fileName, file.buffer, file.mimetype);
+    const fileName = this.generateFileName(file.originalname, `${folder}/`, customFileName).replace(/\.(jpg|jpeg|png|gif)$/i, ".webp");
+    console.log(`[Upload] Uploading file: ${fileName} (${mimeType}, ${buffer.length} bytes)`);
+
+    const publicUrl = await this.supabase.uploadFile(fileName, buffer, mimeType);
     console.log(`[Upload] URL got back: ${publicUrl}`);
 
     return {
       fileName,
       publicUrl,
       originalName: file.originalname,
-      mimeType: file.mimetype,
-      size: file.size,
+      mimeType,
+      size: buffer.length,
     };
   }
 

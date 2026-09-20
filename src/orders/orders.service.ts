@@ -3,12 +3,16 @@ import { PrismaService } from "../common/database/prisma.service";
 import { CreateOrderDto, UpdateOrderStatusDto } from "../common/dto/order.dto";
 import { Prisma } from "@prisma/client";
 import type { OrderStatus } from "../common/types";
+import { EmailService } from "../email/email.service";
 
 @Injectable()
 export class OrdersService {
   private orderCounter = 141;
 
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private emailService: EmailService,
+  ) {}
 
   async findAll(userId: string, userRole: string, query: { page?: string; limit?: string; status?: string }) {
     const where: Record<string, unknown> = {};
@@ -71,6 +75,15 @@ export class OrdersService {
       throw new BadRequestException("Customer not found");
     }
 
+    if (!dto.otpVerified) {
+      throw new BadRequestException("OTP verification required");
+    }
+
+    const mobileRegex = /^[6-9]\d{9}$/;
+    if (!mobileRegex.test(dto.mobile)) {
+      throw new BadRequestException("Invalid mobile number. Must be a valid 10-digit Indian number");
+    }
+
     const items = [];
     let subtotal = 0;
 
@@ -110,13 +123,18 @@ export class OrdersService {
     const year = new Date().getFullYear();
     const orderNumber = `TEM-${year}-${String(this.orderCounter).padStart(5, "0")}`;
 
-    return this.prisma.order.create({
+    const order = await this.prisma.order.create({
       data: {
         orderNumber,
         customerId: customer.id,
-        customerName: customer.name,
-        customerEmail: customer.email,
-        customerCompany: customer.company ?? "",
+        customerName: dto.customerName,
+        customerEmail: dto.customerEmail,
+        customerCompany: dto.customerCompany,
+        mobile: dto.mobile,
+        orgAddress: dto.orgAddress as unknown as Prisma.InputJsonValue,
+        shippingAddress: dto.shippingAddress as unknown as Prisma.InputJsonValue,
+        locationUrl: dto.locationUrl ?? null,
+        otpVerified: true,
         subtotal,
         taxAmount,
         shippingAmount,
@@ -125,7 +143,6 @@ export class OrdersService {
         status: "pending",
         paymentMethod: dto.paymentMethod,
         poReference: dto.poReference ?? null,
-        shippingAddress: dto.shippingAddress as unknown as Prisma.InputJsonValue,
         notes: dto.notes ?? null,
         items: {
           create: items,
@@ -133,6 +150,10 @@ export class OrdersService {
       },
       include: { items: true },
     });
+
+    this.emailService.sendOrderNotification(order).catch(() => {});
+
+    return order;
   }
 
   async updateStatus(id: string, dto: UpdateOrderStatusDto) {

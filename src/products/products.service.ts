@@ -8,6 +8,18 @@ import { Pool } from "pg";
 
 const BRAND_SIMILARITY_THRESHOLD = 0.85;
 
+/**
+ * Normalize keywords: split by both commas and semicolons,
+ * trim whitespace, remove empty strings and junk values.
+ */
+function normalizeKeywords(keywords: string[] | null | undefined): string[] {
+  if (!keywords || keywords.length === 0) return [];
+  return keywords
+    .flatMap(kw => kw.split(/[;,]/))
+    .map(w => w.trim())
+    .filter(w => w.length > 0 && w !== "[object Object]");
+}
+
 function levenshteinDistance(a: string, b: string): number {
   const matrix: number[][] = Array.from({ length: b.length + 1 }, (_, i) => [i]);
   for (let j = 0; j <= a.length; j++) matrix[0][j] = j;
@@ -130,7 +142,7 @@ export class ProductsService {
       ]);
 
       // Log the specific product's data
-      const testProduct = items.find((i) => i.id === "e57cc003-e0eb-456f-8289-16348df656c3");
+      const testProduct = items.find((i: { id: string }) => i.id === "e57cc003-e0eb-456f-8289-16348df656c3");
       if (testProduct) {
         console.log(`[findAll] Product e57cc003 in results - image: "${testProduct.image}", images: ${JSON.stringify(testProduct.images)}`);
       }
@@ -220,9 +232,10 @@ export class ProductsService {
   async create(dto: CreateProductDto) {
     const brandId = await this.resolveBrandId(dto.brand);
     const sku = this.generateSKU(dto.name, dto.brand);
-    const keywordConnections = dto.keywords?.length
+    const normalizedKeywords = normalizeKeywords(dto.keywords);
+    const keywordConnections = normalizedKeywords.length
       ? {
-          connectOrCreate: dto.keywords.map((word: string) => ({
+          connectOrCreate: normalizedKeywords.map((word: string) => ({
             where: { word },
             create: { word },
           })),
@@ -271,7 +284,7 @@ export class ProductsService {
     const brands = await this.prisma.brand.findMany({
       where: { name: { in: brandNames, mode: "insensitive" as const } },
     });
-    const brandMap = new Map(brands.map(b => [b.name.toLowerCase(), b.id]));
+    const brandMap = new Map(brands.map((b: { name: string; id: string }) => [b.name.toLowerCase(), b.id]));
 
     const missingBrands = brandNames.filter(n => !brandMap.has(n.toLowerCase()));
     if (missingBrands.length > 0) {
@@ -305,9 +318,10 @@ export class ProductsService {
           const globalIdx = i + batchIdx;
           const brandId = brandMap.get(item.brand.toLowerCase())!;
           const sku = this.generateSKU(item.name, item.brand);
-          const keywordConnections = item.keywords?.length
+          const normalizedKeywords = normalizeKeywords(item.keywords);
+          const keywordConnections = normalizedKeywords.length
             ? {
-                connectOrCreate: item.keywords.map((word: string) => ({
+                connectOrCreate: normalizedKeywords.map((word: string) => ({
                   where: { word },
                   create: { word },
                 })),
@@ -484,9 +498,10 @@ export class ProductsService {
     }
 
     if (keywords) {
+      const normalizedKeywords = normalizeKeywords(keywords);
       data.keywords = {
         set: [],
-        connectOrCreate: keywords.map((word: string) => ({
+        connectOrCreate: normalizedKeywords.map((word: string) => ({
           where: { word },
           create: { word },
         })),

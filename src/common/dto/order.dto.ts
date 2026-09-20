@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import { IsArray, IsNotEmpty, IsOptional, IsString, ValidateNested } from "class-validator";
+import { IsArray, IsBoolean, IsNotEmpty, IsOptional, IsString, ValidateNested } from "class-validator";
 import { Type } from "class-transformer";
 
 export class OrderItemDto {
@@ -46,21 +46,55 @@ export class CreateOrderDto {
   @IsString()
   customerId: string;
 
+  @ApiProperty({ example: "Rajesh Kumar" })
+  @IsNotEmpty()
+  @IsString()
+  customerName: string;
+
+  @ApiProperty({ example: "rajesh@acme.com" })
+  @IsNotEmpty()
+  @IsString()
+  customerEmail: string;
+
+  @ApiProperty({ example: "Acme Industries" })
+  @IsNotEmpty()
+  @IsString()
+  customerCompany: string;
+
   @ApiProperty({ type: [OrderItemDto] })
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => OrderItemDto)
   items: OrderItemDto[];
 
-  @ApiProperty({ example: "credit_card", enum: ["credit_card", "debit_card", "net_banking", "upi", "cod", "wire_transfer"] })
+  @ApiProperty({ example: "9876543210" })
   @IsNotEmpty()
   @IsString()
-  paymentMethod: string;
+  mobile: string;
+
+  @ApiProperty({ type: AddressDto })
+  @ValidateNested()
+  @Type(() => AddressDto)
+  orgAddress: AddressDto;
 
   @ApiProperty({ type: AddressDto })
   @ValidateNested()
   @Type(() => AddressDto)
   shippingAddress: AddressDto;
+
+  @ApiPropertyOptional({ example: "https://maps.google.com/?q=..." })
+  @IsOptional()
+  @IsString()
+  locationUrl?: string;
+
+  @ApiProperty({ example: true })
+  @IsBoolean()
+  otpVerified: boolean;
+
+  @ApiProperty({ example: "wire_transfer" })
+  @IsNotEmpty()
+  @IsString()
+  paymentMethod: string;
 
   @ApiPropertyOptional({ example: "PO-2024-001" })
   @IsOptional()

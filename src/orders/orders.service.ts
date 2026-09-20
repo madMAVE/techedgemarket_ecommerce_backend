@@ -69,8 +69,8 @@ export class OrdersService {
     return order;
   }
 
-  async create(dto: CreateOrderDto, user: { userId: string; email: string; role: string }) {
-    const customer = await this.prisma.user.findUnique({ where: { id: user.userId } });
+  async create(dto: CreateOrderDto) {
+    const customer = await this.prisma.user.findUnique({ where: { id: dto.customerId } });
     if (!customer) {
       throw new BadRequestException("Customer not found");
     }

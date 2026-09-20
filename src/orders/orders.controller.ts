@@ -25,11 +25,11 @@ interface AuthRequest extends Request {
 @ApiTags("Orders")
 @ApiBearerAuth("jwt")
 @Controller("orders")
-@UseGuards(JwtAuthGuard)
 export class OrdersController {
   constructor(private ordersService: OrdersService) {}
 
   @Get()
+  @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: "List orders (customers see own, admin/manager see all)" })
   @ApiQuery({ name: "page", required: false, example: 1 })
   @ApiQuery({ name: "limit", required: false, example: 20 })
@@ -41,6 +41,7 @@ export class OrdersController {
   }
 
   @Get(":id")
+  @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: "Get a single order by ID" })
   @ApiParam({ name: "id", example: "order-uuid-here" })
   @ApiResponse({ status: 200, description: "Order found" })
@@ -54,13 +55,12 @@ export class OrdersController {
   @ApiBody({ type: CreateOrderDto })
   @ApiResponse({ status: 201, description: "Order created successfully" })
   @ApiResponse({ status: 400, description: "Invalid input or insufficient stock" })
-  @ApiResponse({ status: 401, description: "Unauthorized" })
-  async create(@Req() req: AuthRequest, @Body() dto: CreateOrderDto) {
-    return this.ordersService.create(dto, req.user!);
+  async create(@Body() dto: CreateOrderDto) {
+    return this.ordersService.create(dto);
   }
 
   @Patch(":id/status")
-  @UseGuards(RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles("admin", "manager")
   @ApiOperation({ summary: "Update order status (admin/manager only)" })
   @ApiParam({ name: "id", example: "order-uuid-here" })

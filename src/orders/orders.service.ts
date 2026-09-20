@@ -70,18 +70,25 @@ export class OrdersService {
   }
 
   async create(dto: CreateOrderDto) {
-    const customer = await this.prisma.user.findUnique({ where: { id: dto.customerId } });
-    if (!customer) {
-      throw new BadRequestException("Customer not found");
-    }
-
-    if (!dto.otpVerified) {
-      throw new BadRequestException("OTP verification required");
-    }
-
     const mobileRegex = /^[6-9]\d{9}$/;
     if (!mobileRegex.test(dto.mobile)) {
       throw new BadRequestException("Invalid mobile number. Must be a valid 10-digit Indian number");
+    }
+
+    let customer = await this.prisma.user.findFirst({ where: { phone: dto.mobile } });
+
+    if (!customer) {
+      const randomPassword = Math.random().toString(36).slice(-10) + Math.random().toString(36).slice(-10);
+      customer = await this.prisma.user.create({
+        data: {
+          name: dto.customerName,
+          email: dto.customerEmail,
+          password: randomPassword,
+          role: "customer",
+          company: dto.customerCompany,
+          phone: dto.mobile,
+        },
+      });
     }
 
     const items = [];

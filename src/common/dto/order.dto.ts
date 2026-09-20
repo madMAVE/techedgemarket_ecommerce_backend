@@ -41,10 +41,10 @@ export class AddressDto {
 }
 
 export class CreateOrderDto {
-  @ApiProperty({ example: "customer-uuid-here" })
-  @IsNotEmpty()
+  @ApiPropertyOptional({ example: "customer-uuid-here", description: "Auto-resolved by phone if not provided" })
+  @IsOptional()
   @IsString()
-  customerId: string;
+  customerId?: string;
 
   @ApiProperty({ example: "Rajesh Kumar" })
   @IsNotEmpty()

@@ -11,7 +11,9 @@ import compression from "compression";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 
-let cachedServer: any = null;
+import type { IncomingMessage, ServerResponse } from "http";
+
+let cachedServer: ((req: IncomingMessage, res: ServerResponse) => void) | null = null;
 
 async function createServer() {
   if (cachedServer) return cachedServer;
@@ -57,7 +59,19 @@ async function createServer() {
   return cachedServer;
 }
 
-export default async function handler(req: any, res: any) {
+export default async function handler(req: IncomingMessage, res: ServerResponse) {
+  res.setHeader("Access-Control-Allow-Origin", process.env.ALLOWED_ORIGINS?.split(",")[0] ?? "http://localhost:3000");
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, x-request-time");
+  res.setHeader("Access-Control-Allow-Credentials", "true");
+
+  if (req.method === "OPTIONS") {
+    res.writeHead(204);
+    res.end();
+    return;
+  }
+
   const server = await createServer();
+  if (!server) throw new Error("Server instance not initialized");
   server(req, res);
 }

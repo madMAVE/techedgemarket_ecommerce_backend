@@ -102,6 +102,27 @@ export class OrdersService {
     };
   }
 
+  async getStates(q?: string) {
+    const states = await this.prisma.state.findMany({
+      where: q ? { name: { contains: q, mode: "insensitive" } } : {},
+      select: { stateId: true, name: true },
+      orderBy: { name: "asc" },
+    });
+    return states;
+  }
+
+  async getCities(stateId: number, q?: string) {
+    const cities = await this.prisma.city.findMany({
+      where: {
+        stateId,
+        ...(q ? { name: { contains: q, mode: "insensitive" } } : {}),
+      },
+      select: { cityId: true, name: true },
+      orderBy: { name: "asc" },
+    });
+    return cities;
+  }
+
   async findAll(userId: string, userRole: string, query: { page?: string; limit?: string; status?: string }) {
     const where: Record<string, unknown> = {};
 

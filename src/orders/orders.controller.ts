@@ -36,6 +36,22 @@ export class OrdersController {
     return this.ordersService.lookupByMobile(mobile);
   }
 
+  @Get("locations/states")
+  @ApiOperation({ summary: "Get all states for India" })
+  @ApiResponse({ status: 200, description: "States retrieved successfully" })
+  async getStates(@Query("q") q?: string) {
+    return this.ordersService.getStates(q);
+  }
+
+  @Get("locations/cities")
+  @ApiOperation({ summary: "Get cities for a state" })
+  @ApiQuery({ name: "stateId", example: 1 })
+  @ApiQuery({ name: "q", required: false, example: "Mumbai" })
+  @ApiResponse({ status: 200, description: "Cities retrieved successfully" })
+  async getCities(@Query("stateId") stateId: string, @Query("q") q?: string) {
+    return this.ordersService.getCities(parseInt(stateId, 10), q);
+  }
+
   @Post("otp/send")
   @ApiOperation({ summary: "Send OTP to mobile number" })
   @ApiBody({ type: SendOtpDto })

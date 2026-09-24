@@ -68,6 +68,18 @@ export class PrismaService implements OnModuleInit, OnModuleDestroy {
     return this.client.refreshToken;
   }
 
+  get country() {
+    return this.client.country;
+  }
+
+  get state() {
+    return this.client.state;
+  }
+
+  get city() {
+    return this.client.city;
+  }
+
   get $transaction() {
     return this.client.$transaction.bind(this.client);
   }

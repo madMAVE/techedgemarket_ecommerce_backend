@@ -28,6 +28,14 @@ interface AuthRequest extends Request {
 export class OrdersController {
   constructor(private ordersService: OrdersService) {}
 
+  @Get("lookup")
+  @ApiOperation({ summary: "Lookup customer data by mobile number for form auto-fill" })
+  @ApiQuery({ name: "mobile", example: "9876543210" })
+  @ApiResponse({ status: 200, description: "Customer data found or not found" })
+  async lookupByMobile(@Query("mobile") mobile: string) {
+    return this.ordersService.lookupByMobile(mobile);
+  }
+
   @Post("otp/send")
   @ApiOperation({ summary: "Send OTP to mobile number" })
   @ApiBody({ type: SendOtpDto })

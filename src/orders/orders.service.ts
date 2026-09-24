@@ -64,6 +64,44 @@ export class OrdersService {
     return { message: "Orders retrieved successfully", mobile, total: orders.length, orders };
   }
 
+  async lookupByMobile(mobile: string) {
+    const mobileRegex = /^[6-9]\d{9}$/;
+    if (!mobileRegex.test(mobile)) {
+      throw new BadRequestException("Invalid mobile number. Must be a valid 10-digit Indian number");
+    }
+
+    const latestOrder = await this.prisma.order.findFirst({
+      where: { mobile },
+      orderBy: { createdAt: "desc" },
+    });
+
+    if (!latestOrder) {
+      return { found: false, mobile };
+    }
+
+    const orgAddress = latestOrder.orgAddress as unknown as { street: string; city: string; state: string; zip: string; country: string };
+    const shippingAddress = latestOrder.shippingAddress as unknown as { street: string; city: string; state: string; zip: string; country: string };
+
+    const sameAddress =
+      orgAddress.street === shippingAddress.street &&
+      orgAddress.city === shippingAddress.city &&
+      orgAddress.state === shippingAddress.state &&
+      orgAddress.zip === shippingAddress.zip &&
+      orgAddress.country === shippingAddress.country;
+
+    return {
+      found: true,
+      mobile,
+      customerName: latestOrder.customerName,
+      customerEmail: latestOrder.customerEmail,
+      customerCompany: latestOrder.customerCompany,
+      orgAddress,
+      shippingAddress,
+      sameAddress,
+      locationUrl: latestOrder.locationUrl,
+    };
+  }
+
   async findAll(userId: string, userRole: string, query: { page?: string; limit?: string; status?: string }) {
     const where: Record<string, unknown> = {};
 

@@ -44,6 +44,26 @@ export class OrdersService {
     return { message: "OTP verified", otpToken: record.token };
   }
 
+  async findByMobile(mobile: string, otp: string) {
+    const mobileRegex = /^[6-9]\d{9}$/;
+    if (!mobileRegex.test(mobile)) {
+      throw new BadRequestException("Invalid mobile number. Must be a valid 10-digit Indian number");
+    }
+
+    const record = this.otpStore.get(mobile);
+    if (!record || !record.verified) {
+      throw new BadRequestException("Please request OTP first");
+    }
+
+    const orders = await this.prisma.order.findMany({
+      where: { mobile },
+      include: { items: true },
+      orderBy: { createdAt: "desc" },
+    });
+
+    return { message: "Orders retrieved successfully", mobile, total: orders.length, orders };
+  }
+
   async findAll(userId: string, userRole: string, query: { page?: string; limit?: string; status?: string }) {
     const where: Record<string, unknown> = {};
 

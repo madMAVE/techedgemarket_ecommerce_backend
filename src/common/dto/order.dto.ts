@@ -148,3 +148,15 @@ export class VerifyOtpDto {
   @IsString()
   otp: string;
 }
+
+export class GetOrdersByMobileDto {
+  @ApiProperty({ example: "9876543210" })
+  @IsNotEmpty()
+  @IsString()
+  mobile: string;
+
+  @ApiProperty({ example: "123456" })
+  @IsNotEmpty()
+  @IsString()
+  otp: string;
+}

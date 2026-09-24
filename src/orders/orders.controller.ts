@@ -14,7 +14,7 @@ import { OrdersService } from "./orders.service";
 import { JwtAuthGuard } from "../common/guards/jwt-auth.guard";
 import { RolesGuard } from "../common/guards/roles.guard";
 import { Roles } from "../common/guards/roles.decorator";
-import { CreateOrderDto, UpdateOrderStatusDto, SendOtpDto, VerifyOtpDto } from "../common/dto/order.dto";
+import { CreateOrderDto, UpdateOrderStatusDto, SendOtpDto, VerifyOtpDto, GetOrdersByMobileDto } from "../common/dto/order.dto";
 import { Request } from "express";
 import type { TokenPayload } from "../common/types";
 
@@ -44,6 +44,15 @@ export class OrdersController {
   @ApiResponse({ status: 400, description: "Invalid or expired OTP" })
   async verifyOtp(@Body() dto: VerifyOtpDto) {
     return this.ordersService.verifyOtp(dto.mobile, dto.otp);
+  }
+
+  @Post("by-mobile")
+  @ApiOperation({ summary: "Get orders by mobile number with OTP verification" })
+  @ApiBody({ type: GetOrdersByMobileDto })
+  @ApiResponse({ status: 200, description: "Orders retrieved successfully" })
+  @ApiResponse({ status: 400, description: "Invalid mobile number or OTP not verified" })
+  async findByMobile(@Body() dto: GetOrdersByMobileDto) {
+    return this.ordersService.findByMobile(dto.mobile, dto.otp);
   }
 
   @Get()

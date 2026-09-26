@@ -8,7 +8,6 @@ import { randomInt } from "crypto";
 
 @Injectable()
 export class OrdersService {
-  private orderCounter = 141;
 
   constructor(
     private prisma: PrismaService,
@@ -157,6 +156,26 @@ export class OrdersService {
     return order;
   }
 
+  async generateOrderNumber(): Promise<string> {
+    const year = new Date().getFullYear();
+    const prefix = `TEM-${year}-`;
+
+    const latestOrder = await this.prisma.order.findFirst({
+      where: { orderNumber: { startsWith: prefix } },
+      orderBy: { orderNumber: "desc" },
+      select: { orderNumber: true },
+    });
+
+    let nextNum = 1;
+    if (latestOrder) {
+      const parts = latestOrder.orderNumber.split("-");
+      const currentNum = parseInt(parts[2], 10);
+      nextNum = currentNum + 1;
+    }
+
+    return `${prefix}${String(nextNum).padStart(5, "0")}`;
+  }
+
   async create(dto: CreateOrderDto) {
     const mobileRegex = /^[6-9]\d{9}$/;
     if (!mobileRegex.test(dto.mobile)) {
@@ -214,9 +233,7 @@ export class OrdersService {
     const discountAmount = 0;
     const totalAmount = subtotal + taxAmount + shippingAmount - discountAmount;
 
-    this.orderCounter += 1;
-    const year = new Date().getFullYear();
-    const orderNumber = `TEM-${year}-${String(this.orderCounter).padStart(5, "0")}`;
+    const orderNumber = await this.generateOrderNumber();
 
     const order = await this.prisma.order.create({
       data: {

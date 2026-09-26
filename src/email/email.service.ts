@@ -20,6 +20,22 @@ export class EmailService {
     });
   }
 
+  async sendAdminEmail(to: string, subject: string, content: string) {
+    try {
+      await this.transporter.sendMail({
+        from: `"TechEdge Market" <${this.config.email.user}>`,
+        to,
+        subject,
+        html: content,
+      });
+      this.logger.log(`Admin email sent to ${to}: ${subject}`);
+      return { success: true, message: "Email sent successfully" };
+    } catch (err) {
+      this.logger.error(`Failed to send admin email to ${to}`, err);
+      throw new Error(`Failed to send email: ${err instanceof Error ? err.message : "Unknown error"}`);
+    }
+  }
+
   async sendOrderNotification(order: Order & { items: OrderItem[] }) {
     const orgAddress = order.orgAddress as any;
     const shipAddress = order.shippingAddress as any;

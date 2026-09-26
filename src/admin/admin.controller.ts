@@ -10,9 +10,11 @@ import {
 } from "@nestjs/common";
 import { ApiBearerAuth, ApiBody, ApiCookieAuth, ApiOperation, ApiParam, ApiResponse, ApiTags } from "@nestjs/swagger";
 import { AdminService } from "./admin.service";
+import { EmailService } from "../email/email.service";
 import { CookieJwtAuthGuard } from "./admin-auth.guard";
 import { RolesGuard } from "../common/guards/roles.guard";
 import { Roles } from "../common/guards/roles.decorator";
+import { SendEmailDto } from "../common/dto/email.dto";
 
 @ApiTags("Admin")
 @ApiCookieAuth("admin_session")
@@ -21,7 +23,10 @@ import { Roles } from "../common/guards/roles.decorator";
 @UseGuards(CookieJwtAuthGuard, RolesGuard)
 @Roles("admin", "manager")
 export class AdminController {
-  constructor(private adminService: AdminService) {}
+  constructor(
+    private adminService: AdminService,
+    private emailService: EmailService,
+  ) {}
 
   @Get("inventory")
   @ApiOperation({ summary: "Get all inventory items" })
@@ -231,5 +236,15 @@ export class AdminController {
   @ApiResponse({ status: 200, description: "Analytics data retrieved" })
   async getAnalytics() {
     return this.adminService.getAnalytics();
+  }
+
+  @Post("email")
+  @ApiOperation({ summary: "Send an email from admin panel" })
+  @ApiBody({ type: SendEmailDto })
+  @ApiResponse({ status: 201, description: "Email sent successfully" })
+  @ApiResponse({ status: 400, description: "Invalid email data" })
+  async sendEmail(@Body() dto: SendEmailDto) {
+    const result = await this.emailService.sendAdminEmail(dto.to, dto.subject, dto.content);
+    return result;
   }
 }

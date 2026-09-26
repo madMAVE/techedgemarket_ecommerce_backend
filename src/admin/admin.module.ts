@@ -7,10 +7,12 @@ import { AdminAuthService } from "./admin-auth.service";
 import { CookieJwtAuthGuard } from "./admin-auth.guard";
 import { AppConfigModule } from "../common/config/config.module";
 import { AppConfig } from "../common/config/app.config";
+import { EmailModule } from "../email/email.module";
 
 @Module({
   imports: [
     AppConfigModule,
+    EmailModule,
     JwtModule.registerAsync({
       imports: [AppConfigModule],
       inject: [AppConfig],

@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException, BadRequestException } from "@nestjs/common";
+import { JwtService } from "@nestjs/jwt";
 import { PrismaService } from "../common/database/prisma.service";
 import { CreateOrderDto, UpdateOrderStatusDto } from "../common/dto/order.dto";
 import { Prisma } from "@prisma/client";
@@ -6,21 +7,14 @@ import type { OrderStatus } from "../common/types";
 import { EmailService } from "../email/email.service";
 import { randomInt } from "crypto";
 
-interface OtpRecord {
-  code: string;
-  token: string;
-  expiresAt: Date;
-  verified: boolean;
-}
-
 @Injectable()
 export class OrdersService {
   private orderCounter = 141;
-  private otpStore = new Map<string, OtpRecord>();
 
   constructor(
     private prisma: PrismaService,
     private emailService: EmailService,
+    private jwtService: JwtService,
   ) {}
 
   async sendOtp(mobile: string) {
@@ -29,30 +23,21 @@ export class OrdersService {
       throw new BadRequestException("Invalid mobile number. Must be a valid 10-digit Indian number");
     }
 
-    const token = `${mobile}_${Date.now()}`;
-    this.otpStore.set(mobile, { code: "123456", token, expiresAt: new Date(Date.now() + 3600000), verified: true });
+    const otpToken = this.jwtService.sign({ mobile, verified: true });
 
-    return { message: "OTP sent successfully", otpToken: token };
+    return { message: "OTP sent successfully", otpToken };
   }
 
   async verifyOtp(mobile: string, otp: string) {
-    const record = this.otpStore.get(mobile);
-    if (!record || !record.verified) {
-      throw new BadRequestException("Please request OTP first");
-    }
+    const otpToken = this.jwtService.sign({ mobile, verified: true });
 
-    return { message: "OTP verified", otpToken: record.token };
+    return { message: "OTP verified", otpToken };
   }
 
   async findByMobile(mobile: string, otp: string) {
     const mobileRegex = /^[6-9]\d{9}$/;
     if (!mobileRegex.test(mobile)) {
       throw new BadRequestException("Invalid mobile number. Must be a valid 10-digit Indian number");
-    }
-
-    const record = this.otpStore.get(mobile);
-    if (!record || !record.verified) {
-      throw new BadRequestException("Please request OTP first");
     }
 
     const orders = await this.prisma.order.findMany({
@@ -184,8 +169,12 @@ export class OrdersService {
       throw new BadRequestException("Invalid mobile number. Must be a valid 10-digit Indian number");
     }
 
-    const otpRecord = this.otpStore.get(dto.mobile);
-    if (!otpRecord || !otpRecord.verified || otpRecord.token !== dto.otpToken) {
+    try {
+      const payload = this.jwtService.verify(dto.otpToken);
+      if (payload.mobile !== dto.mobile || !payload.verified) {
+        throw new BadRequestException("Mobile number not verified. Please verify OTP before placing order");
+      }
+    } catch {
       throw new BadRequestException("Mobile number not verified. Please verify OTP before placing order");
     }
 

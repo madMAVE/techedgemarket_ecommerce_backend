@@ -59,7 +59,7 @@ export class AppConfig {
     return {
       host: this.config.get<string>("EMAIL_HOST", "smtp.gmail.com"),
       port: this.config.get<number>("EMAIL_PORT", 587),
-      secure: this.config.get<boolean>("EMAIL_SECURE", false),
+      secure: this.config.get<string>("EMAIL_SECURE", "false") === "true",
       user: this.config.get<string>("EMAIL_USER", ""),
       pass: this.config.get<string>("EMAIL_PASS", ""),
       toAddress: this.config.get<string>("EMAIL_TO_ADDRESS", "techedgehelpdesk@gmail.com"),

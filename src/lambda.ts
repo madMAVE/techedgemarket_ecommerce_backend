@@ -69,6 +69,9 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, x-request-time");
   res.setHeader("Access-Control-Allow-Credentials", "true");
+  res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+  res.setHeader("Pragma", "no-cache");
+  res.setHeader("Expires", "0");
 
   if (req.method === "OPTIONS") {
     res.writeHead(204);

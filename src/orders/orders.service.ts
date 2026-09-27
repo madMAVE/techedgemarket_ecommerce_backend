@@ -283,6 +283,24 @@ export class OrdersService {
       throw new BadRequestException(`Invalid status: ${dto.status}`);
     }
 
+    const statusToTracking: Record<string, string> = {
+      pending: "purchased",
+      confirmed: "dispatched",
+      processing: "on_the_way",
+      shipped: "on_the_way",
+      delivered: "delivered",
+    };
+
+    const trackingStatus = statusToTracking[dto.status];
+    if (trackingStatus) {
+      await this.orderTrackingService.createTrackingEntry(
+        id,
+        trackingStatus as "purchased" | "dispatched" | "on_the_way" | "delivered",
+        `Order status updated to ${dto.status}`,
+        [],
+      );
+    }
+
     return this.prisma.order.update({
       where: { id },
       data: {

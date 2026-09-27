@@ -29,7 +29,30 @@ export class OrderTrackingService {
       orderBy: { createdAt: "desc" },
     });
 
-    return tracking;
+    const statusMap = new Map<string, typeof tracking[number]>();
+    for (const t of tracking) {
+      if (!statusMap.has(t.status)) {
+        statusMap.set(t.status, t);
+      }
+    }
+
+    const allStatuses: OrderTrackingStatus[] = ["purchased", "dispatched", "on_the_way", "delivered"];
+
+    return allStatuses.map((status) => ({
+      status,
+      details: statusMap.get(status) ?? null,
+    }));
+  }
+
+  async createTrackingEntry(orderId: string, status: OrderTrackingStatus, message: string, location: string[]) {
+    return this.prisma.orderTracking.create({
+      data: {
+        orderId,
+        status,
+        location,
+        message,
+      },
+    });
   }
 
   async updateTrackingStatus(trackingId: string, dto: UpdateOrderTrackingStatusDto) {

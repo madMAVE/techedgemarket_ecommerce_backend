@@ -133,10 +133,26 @@ model Order {
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
 
-  customer User      @relation(fields: [customerId], references: [id])
+  customer User             @relation(fields: [customerId], references: [id])
   items    OrderItem[]
+  tracking OrderTracking[]
 
   @@map("orders")
+}
+
+model OrderTracking {
+  id        String              @id @default(uuid()) @map("orderTrackingId")
+  orderId   String
+  status    OrderTrackingStatus
+  location  String[]
+  message   String              @db.VarChar(350)
+  createdAt DateTime            @default(now())
+  updatedAt DateTime            @updatedAt
+
+  order     Order               @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId])
+  @@map("order_tracking")
 }
 
 model OrderItem {
@@ -274,6 +290,13 @@ enum UserRole {
   manager
   sales
   customer
+}
+
+enum OrderTrackingStatus {
+  purchased
+  dispatched
+  on_the_way
+  delivered
 }
 
 enum OrderStatus {

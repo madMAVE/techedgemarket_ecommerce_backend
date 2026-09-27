@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import { IsArray, IsBoolean, IsNotEmpty, IsOptional, IsString, ValidateNested } from "class-validator";
+import { IsArray, IsBoolean, IsNotEmpty, IsOptional, IsString, ValidateNested, MaxLength } from "class-validator";
 import { Type } from "class-transformer";
 
 export class OrderItemDto {
@@ -159,4 +159,23 @@ export class GetOrdersByMobileDto {
   @IsNotEmpty()
   @IsString()
   otp: string;
+}
+
+export class UpdateOrderTrackingStatusDto {
+  @ApiProperty({ example: "dispatched", enum: ["purchased", "dispatched", "on_the_way", "delivered"] })
+  @IsNotEmpty()
+  @IsString()
+  status: string;
+
+  @ApiPropertyOptional({ example: "Package has been dispatched from warehouse" })
+  @IsOptional()
+  @IsString()
+  @MaxLength(350)
+  message?: string;
+
+  @ApiPropertyOptional({ example: ["Mumbai", "Pune"], type: [String] })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  location?: string[];
 }

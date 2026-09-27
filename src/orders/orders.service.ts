@@ -4,6 +4,7 @@ import { CreateOrderDto, UpdateOrderStatusDto } from "../common/dto/order.dto";
 import { Prisma } from "@prisma/client";
 import type { OrderStatus } from "../common/types";
 import { EmailService } from "../email/email.service";
+import { OrderTrackingService } from "../order-tracking/order-tracking.service";
 import { randomInt } from "crypto";
 
 @Injectable()
@@ -12,6 +13,7 @@ export class OrdersService {
   constructor(
     private prisma: PrismaService,
     private emailService: EmailService,
+    private orderTrackingService: OrderTrackingService,
   ) {}
 
   async sendOtp(mobile: string) {
@@ -264,6 +266,8 @@ export class OrdersService {
     });
 
     this.emailService.sendOrderNotification(order).catch(() => {});
+
+    await this.orderTrackingService.createInitialTracking(order.id);
 
     return order;
   }

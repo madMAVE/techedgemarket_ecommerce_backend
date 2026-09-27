@@ -48,6 +48,10 @@ export class PrismaService implements OnModuleInit, OnModuleDestroy {
     return this.client.orderItem;
   }
 
+  get orderTracking() {
+    return this.client.orderTracking;
+  }
+
   get inventory() {
     return this.client.inventory;
   }

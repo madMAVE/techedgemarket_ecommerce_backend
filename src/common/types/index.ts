@@ -50,6 +50,18 @@ export type OrderStatus =
   | "pending" | "confirmed" | "processing"
   | "shipped" | "delivered" | "cancelled" | "refunded";
 
+export type OrderTrackingStatus = "purchased" | "dispatched" | "on_the_way" | "delivered";
+
+export interface OrderTracking {
+  id: string;
+  orderId: string;
+  status: OrderTrackingStatus;
+  location: string[];
+  message: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface OrderItem {
   productId: string;
   productName: string;

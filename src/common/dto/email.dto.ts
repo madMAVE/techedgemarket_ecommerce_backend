@@ -1,5 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import { IsEmail, IsNotEmpty, IsString, IsOptional, IsArray, Transform } from "class-validator";
+import { IsEmail, IsNotEmpty, IsString, IsOptional, IsArray } from "class-validator";
+import { Transform } from "class-transformer";
 
 export class SendEmailDto {
   @ApiProperty({ example: "customer@example.com", description: "Recipient email address" })

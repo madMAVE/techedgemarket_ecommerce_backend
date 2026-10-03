@@ -14,6 +14,7 @@ import {
 import { ApiBearerAuth, ApiBody, ApiCookieAuth, ApiOperation, ApiParam, ApiResponse, ApiTags, ApiConsumes } from "@nestjs/swagger";
 import { AdminService } from "./admin.service";
 import { EmailService } from "../email/email.service";
+import { EmailSignatureService } from "../email/email-signature.service";
 import { CookieJwtAuthGuard } from "./admin-auth.guard";
 import { RolesGuard } from "../common/guards/roles.guard";
 import { Roles } from "../common/guards/roles.decorator";
@@ -45,6 +46,7 @@ export class AdminController {
   constructor(
     private adminService: AdminService,
     private emailService: EmailService,
+    private emailSignatureService: EmailSignatureService,
   ) {}
 
   @Get("inventory")
@@ -296,7 +298,12 @@ export class AdminController {
     @Body() dto: SendEmailWithAttachmentsDto,
     @UploadedFiles() files?: Express.Multer.File[],
   ) {
-    const result = await this.emailService.sendAdminEmail(dto.to, dto.subject, dto.content, files);
+    const signature = await this.emailSignatureService.getActiveSignature();
+    if (!signature) {
+      throw new BadRequestException("No active email signature found. Please create and activate a signature first.");
+    }
+    const contentWithSignature = dto.content + signature;
+    const result = await this.emailService.sendAdminEmail(dto.to, dto.subject, contentWithSignature, files);
     return result;
   }
 }

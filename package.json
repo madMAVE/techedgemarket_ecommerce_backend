@@ -4,7 +4,7 @@
   "description": "TechEdge Market — REST API Backend (NestJS)",
   "main": "dist/main.js",
   "scripts": {
-    "dev": "nest start --watch",
+    "dev": "NODE_NO_WARNINGS=1 nest start --watch",
     "build": "nest build",
     "postinstall": "prisma generate",
     "start": "node dist/main.js",

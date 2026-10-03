@@ -13,6 +13,9 @@ import compression from "compression";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 
+// Suppress Express 4.x url.parse() deprecation warning (fixed in Express 5)
+process.noDeprecation = true;
+
 class QuietLogger extends ConsoleLogger {
   override log(message: string, context?: string) {
     if (message.includes("Mapped ")) return;

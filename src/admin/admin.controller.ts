@@ -267,6 +267,8 @@ export class AdminController {
       type: "object",
       properties: {
         to: { type: "string", example: "customer@example.com" },
+        cc: { type: "array", items: { type: "string" }, example: ["cc1@example.com", "cc2@example.com"] },
+        bcc: { type: "array", items: { type: "string" }, example: ["bcc1@example.com"] },
         subject: { type: "string", example: "Important Update" },
         content: { type: "string", example: "<p>Hello, this is a test email.</p>" },
         attachments: {
@@ -303,7 +305,7 @@ export class AdminController {
       throw new BadRequestException("No active email signature found. Please create and activate a signature first.");
     }
     const contentWithSignature = dto.content + signature;
-    const result = await this.emailService.sendAdminEmail(dto.to, dto.subject, contentWithSignature, files);
+    const result = await this.emailService.sendAdminEmail(dto.to, dto.subject, contentWithSignature, files, dto.cc, dto.bcc);
     return result;
   }
 }

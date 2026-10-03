@@ -20,7 +20,7 @@ export class EmailService {
     });
   }
 
-  async sendAdminEmail(to: string, subject: string, content: string, attachments?: any[]) {
+  async sendAdminEmail(to: string, subject: string, content: string, attachments?: any[], cc?: string[], bcc?: string[]) {
     try {
       const emailAttachments: any[] = [];
 
@@ -34,14 +34,19 @@ export class EmailService {
         }
       }
 
+      const ccList = cc?.filter((e) => e.trim()) || [];
+      const bccList = bcc?.filter((e) => e.trim()) || [];
+
       await this.transporter.sendMail({
         from: `"TechEdge Market" <${this.config.email.user}>`,
         to,
+        cc: ccList.length > 0 ? ccList : undefined,
+        bcc: bccList.length > 0 ? bccList : undefined,
         subject,
         html: content,
         attachments: emailAttachments,
       });
-      this.logger.log(`Admin email sent to ${to}: ${subject}`);
+      this.logger.log(`Admin email sent to ${to}${ccList.length ? `, CC: ${ccList.join(", ")}` : ""}${bccList.length ? `, BCC: ${bccList.join(", ")}` : ""}: ${subject}`);
       return { success: true, message: "Email sent successfully" };
     } catch (err) {
       this.logger.error(`Failed to send admin email to ${to}`, err);

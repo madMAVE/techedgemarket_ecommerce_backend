@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import { IsEmail, IsNotEmpty, IsString, IsOptional, IsArray } from "class-validator";
+import { IsEmail, IsNotEmpty, IsString, IsOptional, IsArray, ValidateIf } from "class-validator";
 
 export class SendEmailDto {
   @ApiProperty({ example: "customer@example.com", description: "Recipient email address" })
@@ -19,10 +19,22 @@ export class SendEmailDto {
 }
 
 export class SendEmailWithAttachmentsDto {
-  @ApiProperty({ example: "customer@example.com", description: "Recipient email address" })
+  @ApiProperty({ example: "customer@example.com", description: "Primary recipient email address" })
   @IsNotEmpty()
   @IsEmail()
   to: string;
+
+  @ApiPropertyOptional({ example: ["cc1@example.com", "cc2@example.com"], description: "CC recipients" })
+  @IsOptional()
+  @IsArray()
+  @IsEmail({}, { each: true })
+  cc?: string[];
+
+  @ApiPropertyOptional({ example: ["bcc1@example.com"], description: "BCC recipients" })
+  @IsOptional()
+  @IsArray()
+  @IsEmail({}, { each: true })
+  bcc?: string[];
 
   @ApiProperty({ example: "Important Update", description: "Email subject" })
   @IsNotEmpty()

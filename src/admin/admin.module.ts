@@ -5,6 +5,7 @@ import { AdminService } from "./admin.service";
 import { AdminAuthController } from "./admin-auth.controller";
 import { AdminAuthService } from "./admin-auth.service";
 import { CookieJwtAuthGuard } from "./admin-auth.guard";
+import { EmailSignatureController } from "../email/email-signature.controller";
 import { AppConfigModule } from "../common/config/config.module";
 import { AppConfig } from "../common/config/app.config";
 import { EmailModule } from "../email/email.module";
@@ -22,7 +23,7 @@ import { EmailModule } from "../email/email.module";
       }),
     }),
   ],
-  controllers: [AdminController, AdminAuthController],
+  controllers: [AdminController, AdminAuthController, EmailSignatureController],
   providers: [AdminService, AdminAuthService, CookieJwtAuthGuard],
   exports: [CookieJwtAuthGuard],
 })

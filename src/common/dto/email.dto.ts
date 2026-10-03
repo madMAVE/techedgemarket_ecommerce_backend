@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import { IsEmail, IsNotEmpty, IsString, IsOptional, IsArray, ValidateIf } from "class-validator";
+import { IsEmail, IsNotEmpty, IsString, IsOptional, IsArray, Transform } from "class-validator";
 
 export class SendEmailDto {
   @ApiProperty({ example: "customer@example.com", description: "Recipient email address" })
@@ -18,6 +18,20 @@ export class SendEmailDto {
   content: string;
 }
 
+function parseJsonArray(value: any): string[] | undefined {
+  if (!value) return undefined;
+  if (Array.isArray(value)) return value;
+  if (typeof value === "string") {
+    try {
+      const parsed = JSON.parse(value);
+      return Array.isArray(parsed) ? parsed : [value];
+    } catch {
+      return value ? [value] : undefined;
+    }
+  }
+  return undefined;
+}
+
 export class SendEmailWithAttachmentsDto {
   @ApiProperty({ example: "customer@example.com", description: "Primary recipient email address" })
   @IsNotEmpty()
@@ -26,13 +40,13 @@ export class SendEmailWithAttachmentsDto {
 
   @ApiPropertyOptional({ example: ["cc1@example.com", "cc2@example.com"], description: "CC recipients" })
   @IsOptional()
-  @IsArray()
+  @Transform(({ value }) => parseJsonArray(value))
   @IsEmail({}, { each: true })
   cc?: string[];
 
   @ApiPropertyOptional({ example: ["bcc1@example.com"], description: "BCC recipients" })
   @IsOptional()
-  @IsArray()
+  @Transform(({ value }) => parseJsonArray(value))
   @IsEmail({}, { each: true })
   bcc?: string[];
 

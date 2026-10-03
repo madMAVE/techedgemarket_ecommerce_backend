@@ -20,13 +20,26 @@ export class EmailService {
     });
   }
 
-  async sendAdminEmail(to: string, subject: string, content: string) {
+  async sendAdminEmail(to: string, subject: string, content: string, attachments?: any[]) {
     try {
+      const emailAttachments: any[] = [];
+
+      if (attachments && attachments.length > 0) {
+        for (const file of attachments) {
+          emailAttachments.push({
+            filename: file.originalname,
+            content: file.buffer,
+            mimetype: file.mimetype,
+          });
+        }
+      }
+
       await this.transporter.sendMail({
         from: `"TechEdge Market" <${this.config.email.user}>`,
         to,
         subject,
         html: content,
+        attachments: emailAttachments,
       });
       this.logger.log(`Admin email sent to ${to}: ${subject}`);
       return { success: true, message: "Email sent successfully" };

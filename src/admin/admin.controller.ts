@@ -7,14 +7,33 @@ import {
   Param,
   Body,
   UseGuards,
+  UseInterceptors,
+  UploadedFiles,
+  BadRequestException,
 } from "@nestjs/common";
-import { ApiBearerAuth, ApiBody, ApiCookieAuth, ApiOperation, ApiParam, ApiResponse, ApiTags } from "@nestjs/swagger";
+import { ApiBearerAuth, ApiBody, ApiCookieAuth, ApiOperation, ApiParam, ApiResponse, ApiTags, ApiConsumes } from "@nestjs/swagger";
 import { AdminService } from "./admin.service";
 import { EmailService } from "../email/email.service";
 import { CookieJwtAuthGuard } from "./admin-auth.guard";
 import { RolesGuard } from "../common/guards/roles.guard";
 import { Roles } from "../common/guards/roles.decorator";
-import { SendEmailDto } from "../common/dto/email.dto";
+import { SendEmailDto, SendEmailWithAttachmentsDto } from "../common/dto/email.dto";
+import { FileFieldsInterceptor, FilesInterceptor } from "@nestjs/platform-express";
+import { diskStorage } from "multer";
+import { extname } from "path";
+
+const ALLOWED_FILE_EXTENSIONS = [".pdf", ".xlsx", ".csv", ".docx", ".jpg", ".jpeg", ".webp", ".png"];
+const ALLOWED_MIME_TYPES = [
+  "application/pdf",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  "text/csv",
+  "application/vnd.ms-excel",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "image/jpeg",
+  "image/jpg",
+  "image/webp",
+  "image/png",
+];
 
 @ApiTags("Admin")
 @ApiCookieAuth("admin_session")
@@ -239,12 +258,45 @@ export class AdminController {
   }
 
   @Post("email")
-  @ApiOperation({ summary: "Send an email from admin panel" })
-  @ApiBody({ type: SendEmailDto })
+  @ApiOperation({ summary: "Send an email from admin panel (with optional attachments)" })
+  @ApiConsumes("multipart/form-data")
+  @ApiBody({
+    schema: {
+      type: "object",
+      properties: {
+        to: { type: "string", example: "customer@example.com" },
+        subject: { type: "string", example: "Important Update" },
+        content: { type: "string", example: "<p>Hello, this is a test email.</p>" },
+        attachments: {
+          type: "array",
+          items: { type: "string", format: "binary" },
+          description: "Allowed: .pdf, .xlsx, .csv, .docx, .jpg, .jpeg, .webp, .png",
+        },
+      },
+    },
+  })
   @ApiResponse({ status: 201, description: "Email sent successfully" })
-  @ApiResponse({ status: 400, description: "Invalid email data" })
-  async sendEmail(@Body() dto: SendEmailDto) {
-    const result = await this.emailService.sendAdminEmail(dto.to, dto.subject, dto.content);
+  @ApiResponse({ status: 400, description: "Invalid email data or file type" })
+  @UseInterceptors(FilesInterceptor("attachments", 10, {
+    fileFilter: (req, file, cb) => {
+      const ext = extname(file.originalname).toLowerCase();
+      if (!ALLOWED_FILE_EXTENSIONS.includes(ext)) {
+        return cb(new BadRequestException(`Invalid file type: ${file.originalname}. Allowed: ${ALLOWED_FILE_EXTENSIONS.join(", ")}`), false);
+      }
+      if (!ALLOWED_MIME_TYPES.includes(file.mimetype)) {
+        return cb(new BadRequestException(`Invalid file type: ${file.originalname}. Allowed: ${ALLOWED_FILE_EXTENSIONS.join(", ")}`), false);
+      }
+      cb(null, true);
+    },
+    limits: {
+      fileSize: 10 * 1024 * 1024, // 10MB per file
+    },
+  }))
+  async sendEmail(
+    @Body() dto: SendEmailWithAttachmentsDto,
+    @UploadedFiles() files?: Express.Multer.File[],
+  ) {
+    const result = await this.emailService.sendAdminEmail(dto.to, dto.subject, dto.content, files);
     return result;
   }
 }

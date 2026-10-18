@@ -136,6 +136,7 @@ model Order {
   customer User             @relation(fields: [customerId], references: [id])
   items    OrderItem[]
   tracking OrderTracking[]
+  document Document?
 
   @@map("orders")
 }
@@ -267,6 +268,77 @@ model EmailSignature {
   @@map("email_signatures")
 }
 
+model Customer {
+  id        String         @id @default(uuid())
+  company   String
+  gstin     String?        @unique
+  mobile    String?
+  email     String?
+  address   String?
+  city      String?
+  state     String?
+  stateCode String?
+  source    CustomerSource @default(MANUAL)
+  isActive  Boolean        @default(true)
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+
+  documents Document[]
+  contacts  ContactPerson[]
+
+  @@map("customers")
+}
+
+model ContactPerson {
+  id         String   @id @default(uuid())
+  customerId String
+  name       String
+  role       String?
+  mobile     String?
+  email      String?
+  isPrimary  Boolean  @default(false)
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([customerId])
+  @@map("contact_people")
+}
+
+model Document {
+  id          String         @id @default(uuid())
+  type        DocumentType
+  status      DocumentStatus @default(DRAFT)
+  number      String
+  issueDate   DateTime
+  partyName   String
+  customerId  String?
+  orderId     String?        @unique
+  publicToken String         @unique @default(cuid())
+  payload     Json
+  createdBy   String?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  customer Customer? @relation(fields: [customerId], references: [id])
+  order    Order?    @relation(fields: [orderId], references: [id])
+
+  @@unique([type, number])
+  @@index([type, issueDate])
+  @@map("documents")
+}
+
+model DocumentSequence {
+  type       DocumentType
+  period     String
+  lastNumber Int @default(0)
+
+  @@id([type, period])
+  @@map("document_sequences")
+}
+
 model Country {
   countryId Int     @id @default(autoincrement())
   name      String  @unique
@@ -357,4 +429,21 @@ enum ServicePriority {
   medium
   high
   critical
+}
+
+enum DocumentType {
+  INVOICE
+  QUOTATION
+  PURCHASE_ORDER
+}
+
+enum DocumentStatus {
+  DRAFT
+  ISSUED
+  CANCELLED
+}
+
+enum CustomerSource {
+  MANUAL
+  WEBSITE
 }

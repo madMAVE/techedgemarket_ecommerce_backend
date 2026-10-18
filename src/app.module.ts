@@ -8,6 +8,7 @@ import { AppConfigModule } from "./common/config/config.module";
 import { SupabaseModule } from "./common/supabase/supabase.module";
 import { UploadsModule } from "./common/uploads/uploads.module";
 import { EmailModule } from "./email/email.module";
+import { DocumentsModule } from "./documents/documents.module";
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { EmailModule } from "./email/email.module";
     OrdersModule,
     AdminModule,
     EmailModule,
+    DocumentsModule,
   ],
 })
 export class AppModule {}

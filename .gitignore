@@ -5,5 +5,6 @@ dist/
 /uploads/
 *.log
 .DS_Store
+*.md
 
 /src/generated/prisma

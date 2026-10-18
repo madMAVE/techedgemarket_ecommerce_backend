@@ -84,6 +84,8 @@ async function bootstrap() {
     .addTag("Orders", "Order management: create, list, update status")
     .addTag("Admin Auth", "Admin panel authentication")
     .addTag("Admin", "Admin operations: inventory, procurement, prospects, tickets, analytics")
+    .addTag("Documents", "Admin documents: invoices, quotations, purchase orders, customers, contacts")
+    .addTag("Documents (public)", "Public read-only document view by token (QR target)")
     .build();
 
   const document = SwaggerModule.createDocument(app, swaggerConfig, {

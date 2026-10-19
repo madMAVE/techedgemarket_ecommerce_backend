@@ -10,6 +10,21 @@ const NUMBER_PREFIX: Record<DocumentType, string> = {
   [DocumentType.PURCHASE_ORDER]: "PO",
 };
 
+const OUR_INITIALS = "TEM";
+const INITIALS_SKIP = new Set([
+  "pvt", "private", "ltd", "limited", "llp", "inc", "co", "corp", "corporation",
+  "company", "industries", "india", "the", "and", "solutions", "technologies", "technology",
+]);
+
+function partyInitials(name: string): string {
+  const words = name
+    .split(/[^A-Za-z0-9]+/)
+    .filter((w) => w && !INITIALS_SKIP.has(w.toLowerCase()));
+  if (words.length >= 2) return words.map((w) => w[0].toUpperCase()).join("").slice(0, 3);
+  const single = words[0] ?? name.replace(/[^A-Za-z0-9]/g, "");
+  return single.toUpperCase().slice(0, 3) || "NA";
+}
+
 interface DocLineItem {
   id?: string;
   title?: string;
@@ -37,7 +52,8 @@ export class DocumentsService {
     }
 
     const customer = await this.upsertCustomerFromParty(dto.party, dto.contacts);
-    const number = await this.generateNumber(dto.type);
+    if (!customer) throw new BadRequestException("Party name is required to assign a document number");
+    const number = await this.generateNumber(dto.type, customer.id, partyName);
 
     return this.prisma.document.create({
       data: {
@@ -293,27 +309,29 @@ export class DocumentsService {
     return match as T[keyof T];
   }
 
-  private fiscalPeriod(): string {
+  private fiscalStartYear(): number {
     // Indian fiscal year Apr-Mar, computed in IST
     const ist = new Date(Date.now() + 5.5 * 60 * 60 * 1000);
     const year = ist.getUTCFullYear();
     const month = ist.getUTCMonth();
-    const start = month >= 3 ? year : year - 1;
-    return `${start}-${start + 1}`;
+    return month >= 3 ? year : year - 1;
   }
 
-  private async generateNumber(type: DocumentType): Promise<string> {
-    const period = this.fiscalPeriod();
+  private async generateNumber(type: DocumentType, customerId: string, partyName: string): Promise<string> {
+    const start = this.fiscalStartYear();
+    const period = `${start}-${start + 1}`;
     await this.prisma.documentSequence.upsert({
-      where: { type_period: { type, period } },
-      create: { type, period, lastNumber: 0 },
+      where: { type_period_customerId: { type, period, customerId } },
+      create: { type, period, customerId, lastNumber: 0 },
       update: {},
     });
     const row = await this.prisma.documentSequence.update({
-      where: { type_period: { type, period } },
+      where: { type_period_customerId: { type, period, customerId } },
       data: { lastNumber: { increment: 1 } },
     });
-    return `${NUMBER_PREFIX[type]}-${period.split("-")[0]}-${String(row.lastNumber).padStart(4, "0")}`;
+    const seq = String(row.lastNumber).padStart(2, "0");
+    const fy = `${String(start).slice(2)}-${String(start + 1).slice(2)}`;
+    return `${OUR_INITIALS}/${partyInitials(partyName)}/${NUMBER_PREFIX[type]}/${fy}/${seq}`;
   }
 
   private async upsertCustomerFromParty(party: DocPartyDto, contacts?: DocContactDto[]) {

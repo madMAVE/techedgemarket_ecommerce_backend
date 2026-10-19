@@ -325,7 +325,7 @@ model Document {
   customer Customer? @relation(fields: [customerId], references: [id])
   order    Order?    @relation(fields: [orderId], references: [id])
 
-  @@unique([type, number])
+  @@index([type, number])
   @@index([type, issueDate])
   @@map("documents")
 }
@@ -333,9 +333,10 @@ model Document {
 model DocumentSequence {
   type       DocumentType
   period     String
+  customerId String
   lastNumber Int @default(0)
 
-  @@id([type, period])
+  @@id([type, period, customerId])
   @@map("document_sequences")
 }
 
